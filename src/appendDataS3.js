@@ -12,7 +12,7 @@ exports.handler = function(event, context) {
 
 
     // Get the object from the event and show its content type
-    var bucket = 'madsenm-movie-hist-data';
+    var bucket = 'movie-hist-data';
     var key = 'movie_ratings_simple.csv';
     var params = {
         Bucket: bucket,

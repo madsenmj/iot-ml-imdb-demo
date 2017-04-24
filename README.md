@@ -19,94 +19,49 @@ I present a second notebook, [MovieAnalysis](/src/MovieAnalysis.ipynb) that look
 
 Finally, a third notebook, [MoviePredictionTests](/src/MoviePredictionTests.ipynb) does a first-pass attempt at predicting the rating of a movie given its director, genre, and year.
 
-# IoT Interface
+# IoT AWS Interface
 
-The next part of the project was to upload the data to an AWS dynamoDB database.
-
-
-I needed to subscribe to the $aws/things/MovieSelector/shadow/update topic on the device. Then, when I publish to that topic, the message gets sent back to the device. There is a handler function that works with the response to process the data.
-
-http://docs.aws.amazon.com/iot/latest/developerguide/what-is-aws-iot.html
-
-
-Extracted the ratings lines (removed header and footer) using Microsoft Excel. Copied the body of the data starting at line 296 and ending before the "REPORT FORMAT" lines to a new worksheet and saved as ratings.csv
-
-
-
-
-
-# Scripts
-
-
-So the path looks like this:
-
-1) The IoT sends a request for a prediction. AWS runs the prediction and sends back the probabilities. This repeats for 4 runs as the IoT decides how to best utilize available resources
-
-2) The IoT device then "executes" the best option and gets an "actual" score for the set. The device then sends this back to AWS for storage and learning. AWS puts this data into DynamoDB. 
-
-3) There is a regular (daily?!?!) pipeline that shifts the DyanmoDB data to Redshift and then re-trains the model based on the new data
-
-
-
-
-**I think these are not working and not used... **
-
-getMLModel returns:
+## AWS dynamoDB
+The next part of the project was to upload the [data](/data/movie_ratings_simple.tsv) to an AWS dynamoDB database. This consists of first uploading the data to an S3 storage container, then moving from the storage container to the dynamoDB. The dynamoDB requires an input data schema and format following:
 
 ```
-{
-  "MLModelId": "ml-wjbqpgTq9bC",
-  "TrainingDataSourceId": "ds-MPfGVCiU36s",
-  "CreatedByIamUser": "arn:aws:iam::926793078622:root",
-  "CreatedAt": "2016-09-08T15:47:41.436Z",
-  "LastUpdatedAt": "2016-09-08T15:54:06.026Z",
-  "Name": "ML model: Simple Movie",
-  "Status": "COMPLETED",
-  "SizeInBytes": 1415234,
-  "EndpointInfo": {
-    "PeakRequestsPerSecond": 200,
-    "CreatedAt": "2016-09-19T12:27:19.917Z",
-    "EndpointUrl": "https://realtime.machinelearning.us-east-1.amazonaws.com",
-    "EndpointStatus": "READY"
-  },
-  "TrainingParameters": {
-    "algorithm": "sgd",
-    "sgd.l1RegularizationAmount": "0.0",
-    "sgd.l2RegularizationAmount": "1e-6",
-    "sgd.maxMLModelSizeInBytes": "104857600",
-    "sgd.maxPasses": "10",
-    "sgd.shuffleType": "auto"
-  },
-  "InputDataLocationS3": "s3://madsenm-movie-hist-data/movie_ratings_simple.csv",
-  "MLModelType": "MULTICLASS",
-  "LogUri": "https://eml-prod-emr.s3.amazonaws.com/926793078622-pr-ml-wjbqpgTq9bC/userlog/926793078622-pr-ml-wjbqpgTq9bC?AWSAccessKeyId=AKIAJ76NNIATX32EN2VA&Expires=1474911155&Signature=O4tIc9MnIKRe4D700PltfXrd2AM%3D",
-  "Recipe": "{\n  \"groups\" : { },\n  \"assignments\" : { },\n  \"outputs\" : [ \"ALL_CATEGORICAL\" ]\n}",
-  "Schema": "{\"version\":\"1.0\",\"rowId\":\"title\",\"rowWeight\":null,\"targetAttributeName\":\"stars\",\"dataFormat\":\"CSV\",\"dataFileContainsHeader\":true,\"attributes\":[{\"attributeName\":\"title\",\"attributeType\":\"CATEGORICAL\"},{\"attributeName\":\"year\",\"attributeType\":\"CATEGORICAL\"},{\"attributeName\":\"Director1\",\"attributeType\":\"CATEGORICAL\"},{\"attributeName\":\"Genre1\",\"attributeType\":\"CATEGORICAL\"},{\"attributeName\":\"Genre2\",\"attributeType\":\"CATEGORICAL\"},{\"attributeName\":\"Genre3\",\"attributeType\":\"CATEGORICAL\"},{\"attributeName\":\"stars\",\"attributeType\":\"CATEGORICAL\"}],\"excludedAttributeNames\":[]}"
-}
-
+{"title":{"s":"Test Movie Title"},"Director1":{"s":"Director name"},"Genre1":{"s":"Genre1 Name"},"Genre2":{"s":"Genre2 Name"},"stars":{"n":"9"},"year":{"n":"2002"},"Genre3":{"s":"Genre3 Name"}}
 ```
 
-getEvaluation returns:
+I followed [this documentation](http://docs.aws.amazon.com/datapipeline/latest/DeveloperGuide/dp-importexport-ddb-part1.html) to import the data into the dynamoDB.
 
-```
-{
-  "EvaluationId": "ev-BZpIarHNR9D",
-  "MLModelId": "ml-wjbqpgTq9bC",
-  "EvaluationDataSourceId": "ds-BGSNqUEaOjl",
-  "InputDataLocationS3": "s3://madsenm-movie-hist-data/movie_ratings_simple.csv",
-  "CreatedByIamUser": "arn:aws:iam::926793078622:root",
-  "CreatedAt": "2016-09-08T15:47:41.797Z",
-  "LastUpdatedAt": "2016-09-08T15:57:13.362Z",
-  "Name": "Evaluation: ML model: Simple Movie",
-  "Status": "COMPLETED",
-  "PerformanceMetrics": {
-    "Properties": {
-      "MulticlassAvgFScore": "0.22252705911460363"
-    }
-  },
-  "LogUri": "https://eml-prod-emr.s3.amazonaws.com/926793078622-ev-ev-BZpIarHNR9D/userlog/926793078622-ev-ev-BZpIarHNR9D?AWSAccessKeyId=AKIAJ76NNIATX32EN2VA&Expires=1474911298&Signature=rOyK8zpZTEziRGGELBmUf4QjizI%3D"
-}
+## AWS Machine Learning
 
-```
+I used the data stored in the S3 container to train the machine learning model [following this tutorial](http://docs.aws.amazon.com/machine-learning/latest/dg/tutorial.html). I established an endpoint for the trained model in order to query the model from my IoT server node.
+
+## AWS IoT 
+
+I built an AWS IoT portal following the [SDK tutorial](https://aws.amazon.com/iot-platform/getting-started/). I registered and connected my [Rapsberry Pi model 3](https://www.raspberrypi.org/products/raspberry-pi-3-model-b/) to the IoT portal. This involved downloading license keys and certificates and putting them on the Raspberry Pi.
+
+The IoT hub is set to look for prediction requests on the `filmrequest` topic from the IoT device.
+
+The IoT device is set to listen on the MQTT topic `$aws/things/MovieSelector/shadow/update` for predictions from the AWS machine learning model.
+
+The IoT hub is looking for new "scored" films on the `filmupdate` topic.
+
+## Lambda Scripts
+
+The data path on AWS looks like this:
+
+1. The IoT sends a request for a prediction. This is directed to a [lambda script](/src/getMLpredictions.js) that queries the trained model. 
+2. The trained model returns a JSON object with its prediction. The prediction is then returned to the IoT device. 
+3. The IoT device repeats this process several times for different combinations of inputs, looking for the best possible output.
+4. The IoT device then makes a decision about which set to use, then gets feedback as to the "real" rating for that set of inputs. It sends the final movie information, with its rating, back to the AWS IoT hub. The hub then directs that data to two places, [storing it in the dynamoDB](/src/moveDataToDynamoDB.js) and [appending it to the S3 tsv file](/src/appendDataS3.js) for future improvements in the machine learning model.
+
+
+# IoT Device Configuration
+
+The Raspberry Pi uses the [AWS Python SDK](https://github.com/aws/aws-iot-device-sdk-python) to interface with the AWS IoT hub. This requires gathering the certificate and private key files and saving them in the source directory on the Pi.
+
+The Pi also needs a copy of the movie_ratings_simple.csv data file from which it creates random combinations of film titles, directors, years, and genres. This is testing in the [device movie generator](/src/iot_device_movie_generator.ipynb) notebook. We then run through a complete test of the system (including communications with the AWS endpoint) in the [last notebook](/src/iot_device_test.ipynb).
+
+The final version is compiled in a single [device simulator script](/src/iot_device_simulator.py) python script.
+
+
 
 
