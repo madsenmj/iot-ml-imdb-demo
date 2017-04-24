@@ -13,21 +13,21 @@ I begin with data from two sources:
 
 ## Data Processing and Exploration
 
-The [GetMovieData](/src/GetMovieData.ipynb) notebook steps through the acquisition of the Open MDB data using their API. It also combines the data with a [cleaned version](data/ratings.csv) of the `ratings.list` data from the IMDb. The cleaned version removes the header and footer from the file and turns it into a `csv`. This notebook outputs two additional files that have the Open MDB data: (/src/openmdb.csv) and (/src/openmdb_more.csv). It then combines all the datasets and outputs a simplified dataset containing the director, year, genre, and star rating (/data/movie_ratings_simple.csv).
+The [GetMovieData](/src/GetMovieData.ipynb) notebook steps through the acquisition of the Open MDB data using their API. It also combines the data with a [cleaned version](data/ratings.csv) of the `ratings.list` data from the IMDb. The cleaned version removes the header and footer from the file and turns it into a `csv`. This notebook outputs two additional files that have the [Open MDB data with films with more than 5000 ratings:](/src/openmdb.csv) and [films with 1500 to 5000 ratings](/data/openmdb_more.csv). It then combines all the datasets and outputs a simplified dataset containing the director, year, genre, and star rating (/data/movie_ratings_simple.csv).
 
-I present a second notebook, [MovieAnalysis](MovieAnalysis.ipynb) that looks at the data and examines some of its features.
+I present a second notebook, [MovieAnalysis](/src/MovieAnalysis.ipynb) that looks at the data and examines some of its features.
 
-Finally, a third notebook, [MoviePredictionTests](MoviePredictionTests.ipynb) does a first-pass attempt at predicting the rating of a movie given its director, genre, and year.
+Finally, a third notebook, [MoviePredictionTests](/src/MoviePredictionTests.ipynb) does a first-pass attempt at predicting the rating of a movie given its director, genre, and year.
 
 # IoT Interface
 
-The next part of the project was to upload the 
+The next part of the project was to upload the data to an AWS dynamoDB database.
 
 
 I needed to subscribe to the $aws/things/MovieSelector/shadow/update topic on the device. Then, when I publish to that topic, the message gets sent back to the device. There is a handler function that works with the response to process the data.
 
 http://docs.aws.amazon.com/iot/latest/developerguide/what-is-aws-iot.html
-ratings.list.gz
+
 
 Extracted the ratings lines (removed header and footer) using Microsoft Excel. Copied the body of the data starting at line 296 and ending before the "REPORT FORMAT" lines to a new worksheet and saved as ratings.csv
 
